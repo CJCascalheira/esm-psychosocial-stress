@@ -1,3 +1,9 @@
+# IGNORE DATA FILES
+
+data/**
+
+# IGNORE R FILES
+
 # History files
 .Rhistory
 .Rapp.history

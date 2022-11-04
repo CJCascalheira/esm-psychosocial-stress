@@ -1,0 +1,15 @@
+Convergence issues in glmer() from library(lme4)
+
+- https://stats.stackexchange.com/questions/447825/lme4-what-is-gained-by-scaling-variables
+- https://stats.stackexchange.com/questions/164457/r-glmer-warnings-model-fails-to-converge-model-is-nearly-unidentifiable
+- https://rstudio-pubs-static.s3.amazonaws.com/33653_57fc7b8e5d484c909b615d8633c01d51.html
+
+Problem solving singular fits
+
+- https://stats.stackexchange.com/questions/378939/dealing-with-singular-fit-in-mixed-models
+- https://stats.stackexchange.com/questions/509892/why-is-this-linear-mixed-model-singular
+- https://stats.stackexchange.com/questions/424392/what-exactly-is-meant-by-a-singular-fit-of-a-mixed-model-and-why-does-it-result
+
+Tips on Correlated or Uncorrelated Random Effects
+
+- https://lme4.r-forge.r-project.org/slides/2011-03-16-Amsterdam/2Longitudinal.pdf

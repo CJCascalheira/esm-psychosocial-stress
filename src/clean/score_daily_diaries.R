@@ -1,4 +1,6 @@
 # Load dependencies
+library(ltm)
+library(psych)
 library(tidyverse)
 
 # Import data
@@ -44,8 +46,35 @@ daily_diaries <- bind_rows(day_01, day_02) %>%
   bind_rows(day_11) %>%
   bind_rows(day_12) %>%
   bind_rows(day_13) %>%
-  bind_rows(day_14) %>%
-  select(-starts_with("RecipientEmail"))
+  bind_rows(day_14)
+
+# INTERNAL CONSISTENCY ----------------------------------------------------
+
+# Daily general stressors 
+general_stressors <- daily_diaries %>%
+  select(DGS_1, DGS_2, DGS_3) %>%
+  # Recode to numeric
+  mutate(across(DGS_1:DGS_3, ~ recode(., "Yes" = 1, "No" = 0)))
+
+cronbach.alpha(data = as.matrix(na.omit(general_stressors)))
+omega(as.matrix(na.omit(general_stressors)), nfactors = 1)
+
+# Daily minority stressors
+minority_stressors <- daily_diaries %>%
+  select(SM_Strs_1:SM_Strs_8) %>%
+  mutate(across(SM_Strs_1:SM_Strs_8, ~ recode(., "Not at all" = 0,
+                                              `0` = 0,
+                                              `1` = 1,
+                                              `2` = 2,
+                                              "Somewhat" = 3,
+                                              `3` = 3,
+                                              `4` = 4,
+                                              `5` = 5,
+                                              "A lot" = 6,
+                                              `6` = 6))) 
+
+cronbach.alpha(data = as.matrix(na.omit(minority_stressors)))
+omega(as.matrix(na.omit(minority_stressors)), nfactors = 1)
 
 # DAILY AFFECT ------------------------------------------------------------
 

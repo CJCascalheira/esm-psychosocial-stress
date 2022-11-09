@@ -14,14 +14,13 @@ options(scipen = 100)
 baseline <- import("data/cleaned_scored/baseline_survey.sav") %>%
   as_tibble()
 
-baseline_demographics <- read_csv("data/raw_baseline/baseline_survey.csv") %>%
-  rename(Email = Email...3)
+baseline_demographics <- read_csv("data/raw_baseline/baseline_survey.csv")
 
 daily_diaries <- read_csv("data/cleaned_scored/daily_diaries.csv")
 
 # Identify cisgender men
 cis_men <- baseline_demographics %>%
-  filter(Gender == "Cisgender man (non-transgender)") %>%
+  filter(Gender == "Cisgender man (non-transgender)" | Sex_or == "Straight or heterosexual") %>%
   pull(login_id)
 
 # Remove cisgender men
@@ -101,8 +100,7 @@ comp_effects <- full_data %>%
   group_by(login_id) %>%
   summarize(
     mean_general_stress = mean(DD_gen_stress_total, na.rm = TRUE),
-    mean_minority_stress = mean(DD_minority_stress_total, na.rm = TRUE),
-    mean_ptsd = mean(DD_ptsd_total, na.rm = TRUE)
+    mean_minority_stress = mean(DD_minority_stress_total, na.rm = TRUE)
   )
 
 # Create interpersonal trauma covariate
@@ -153,6 +151,14 @@ full_data1 <- left_join(full_data, criterion_a_event) %>%
   )
 
 # NULL MODEL --------------------------------------------------------------
+
+# ICC for general stressors
+null_model_aov <- aov(DD_gen_stress_total ~ as.factor(login_id), full_data1)
+ICC1(null_model_aov)
+
+# ICC  minority stressors 
+null_model_aov <- aov(DD_minority_stress_total ~ as.factor(login_id), full_data1)
+ICC1(null_model_aov)
 
 # Specify the null model
 null_model <- glmer(
@@ -363,132 +369,6 @@ all_p_values
 p.adjust(p = all_p_values$p_value,
          method = "BH")
 
-# 2) Stressor Interactions ---------------------------------------------------
-
-# ...2.1) EDS ----------------------------------------------------------------
-
-# Discrimination * gender
-l2_eds_gender <- glmer(
-  # control for previous day's alcohol use
-  DD_alcohol_use ~ 1 + day + lag_DD_alcohol_use + 
-    # Add covariates
-    is_poc + above_25k + grand_age + 
-    # Add distal stressor
-    EDS_tertile*Gender +
-    # Random effects
-    (1|login_id),
-  family = "binomial",
-  data = full_data1,
-  nAGQ = 1, # Use Laplace approximation 
-  control = glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 2e5))
-)
-summary(l2_eds_gender)
-
-# Gender not significant
-
-# Discrimination * sexual orientation
-l2_eds_sex_or <- glmer(
-  # control for previous day's alcohol use
-  DD_alcohol_use ~ 1 + day + lag_DD_alcohol_use + 
-    # Add covariates
-    is_poc + above_25k + grand_age + 
-    # Add distal stressor
-    EDS_tertile*sex_orient +
-    # Random effects
-    (1|login_id),
-  family = "binomial",
-  data = full_data1,
-  nAGQ = 1, # Use Laplace approximation 
-  control = glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 2e5))
-)
-summary(l2_eds_sex_or)
-
-# Sexual orientation not significant
-
-# ...2.2) ACES ---------------------------------------------------------------
-
-# ACES * gender
-l2_ACES_gender <- glmer(
-  # control for previous day's alcohol use
-  DD_alcohol_use ~ 1 + day + lag_DD_alcohol_use + 
-    # Add covariates
-    is_poc + above_25k + grand_age + 
-    # Add distal stressor
-    ACES_tertile*Gender +
-    # Random effects
-    (1|login_id),
-  family = "binomial",
-  data = full_data1,
-  nAGQ = 1, # Use Laplace approximation 
-  control = glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 2e5))
-)
-summary(l2_ACES_gender)
-
-# Gender is not significant
-
-# ACES * sexual orientation
-l2_ACES_sex_or <- glmer(
-  # control for previous day's alcohol use
-  DD_alcohol_use ~ 1 + day + lag_DD_alcohol_use + 
-    # Add covariates
-    is_poc + above_25k + grand_age + 
-    # Add distal stressor
-    ACES_tertile*sex_orient +
-    # Random effects
-    (1|login_id),
-  family = "binomial",
-  data = full_data1,
-  nAGQ = 1, # Use Laplace approximation 
-  control = glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 2e5))
-)
-summary(l2_ACES_sex_or)
-
-# Sexual orientation is not significant
-
-# ...2.3) IPV ---------------------------------------------------------------
-
-# IPV * gender
-l2_IPV_gender <- glmer(
-  # control for previous day's alcohol use
-  DD_alcohol_use ~ 1 + day + lag_DD_alcohol_use + 
-    # Add covariates
-    is_poc + above_25k + grand_age + 
-    # Add distal stressor
-    IPV_tertile*Gender +
-    # Random effects
-    (1|login_id),
-  family = "binomial",
-  data = full_data1,
-  nAGQ = 1, # Use Laplace approximation 
-  control = glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 2e5))
-)
-summary(l2_IPV_gender)
-
-# Gender is NOT significant
-
-# IPV * sexual orientation
-l2_IPV_sex_or <- glmer(
-  # control for previous day's alcohol use
-  DD_alcohol_use ~ 1 + day + lag_DD_alcohol_use + 
-    # Add covariates
-    is_poc + above_25k + grand_age + 
-    # Add distal stressor
-    IPV_tertile*sex_orient +
-    # Random effects
-    (1|login_id),
-  family = "binomial",
-  data = full_data1,
-  nAGQ = 1, # Use Laplace approximation 
-  control = glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 2e5))
-)
-summary(l2_IPV_sex_or)
-
-# Sexual orientation is significant
-CI <- confint(l2_IPV_sex_or, parm = "beta_", method = "Wald", level = .95)
-logodds <- cbind(OR = fixef(l2_IPV_sex_or), CI)
-ORwCI <- exp(logodds)
-print(ORwCI, digits = 5)
-
 # DAILY STRESSORS ---------------------------------------------------------
 
 # 1) Test Individual L1 Stressors --------------------------------------------
@@ -678,152 +558,6 @@ all_p_values
 # https://stat.ethz.ch/R-manual/R-devel/library/stats/html/p.adjust.html
 p.adjust(p = all_p_values$p_value,
          method = "BH")
-
-# 3) Demographic Moderators --------------------------------------------------
-
-# ...3.1) General Stress ---------------------------------------------
-
-# General stressors + gender
-l1_gen_gender <- glmer(
-  # control for previous day's alcohol use
-  DD_alcohol_use ~ 1 + day + lag_DD_alcohol_use + 
-    # Add covariates
-    is_poc + above_25k + grand_age + 
-    # Add stressors
-    DD_gen_stress_total*Gender + mean_general_stress +
-    # Random effects
-    (1|login_id),
-  family = "binomial",
-  data = full_data1,
-  nAGQ = 1, # Use Laplace approximation 
-  control = glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 2e5))
-)
-summary(l1_gen_gender)
-
-# Gender is significant
-CI <- confint(l1_gen_gender, parm = "beta_", method = "Wald")
-logodds <- cbind(OR = fixef(l1_gen_gender), CI)
-ORwCI <- exp(logodds)
-print(ORwCI, digits = 3)
-
-# General stressors + sexual orientation
-l1_gen_sex_or <- glmer(
-  # control for previous day's alcohol use
-  DD_alcohol_use ~ 1 + day + lag_DD_alcohol_use + 
-    # Add covariates
-    is_poc + above_25k + grand_age + 
-    # Add stressors
-    DD_gen_stress_total*sex_orient + mean_general_stress +
-    # Random effects
-    (1|login_id),
-  family = "binomial",
-  data = full_data1,
-  nAGQ = 1, # Use Laplace approximation 
-  control = glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 2e5))
-)
-summary(l1_gen_sex_or)
-
-# Sexual orientation is significant 
-CI <- confint(l1_gen_sex_or, parm = "beta_", method = "Wald")
-logodds <- cbind(OR = fixef(l1_gen_sex_or), CI)
-ORwCI <- exp(logodds)
-print(ORwCI, digits = 3)
-
-# ...3.2) Minority Stress ------------------------------------------
-
-# Minority Stressors * gender
-l1_minority_gender <- glmer(
-  # control for previous day's alcohol use
-  DD_alcohol_use ~ 1 + day + lag_DD_alcohol_use + 
-    # Add covariates
-    is_poc + above_25k + grand_age + 
-    # Add stressor
-    DD_minority_stress_total*Gender + mean_minority_stress +
-    # Random effects
-    (1|login_id),
-  family = "binomial",
-  data = full_data1,
-  nAGQ = 1, # Use Laplace approximation 
-  control = glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 2e5))
-)
-summary(l1_minority_gender)
-
-# Gender is NOT significant
-CI <- confint(l1_minority_gender, parm = "beta_", method = "Wald")
-logodds <- cbind(OR = fixef(l1_minority_gender), CI)
-ORwCI <- exp(logodds)
-print(ORwCI, digits = 3)
-
-# Minority Stressors * sexual orientation
-l1_minority_sex_or <- glmer(
-  # control for previous day's alcohol use
-  DD_alcohol_use ~ 1 + day + lag_DD_alcohol_use + 
-    # Add covariates
-    is_poc + above_25k + grand_age + 
-    # Add stressor
-    DD_minority_stress_total*sex_orient + mean_minority_stress +
-    # Random effects
-    (1|login_id),
-  family = "binomial",
-  data = full_data1,
-  nAGQ = 1, # Use Laplace approximation 
-  control = glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 2e5))
-)
-summary(l1_minority_sex_or)
-
-# Sexual orientation is significant
-CI <- confint(l1_minority_sex_or, parm = "beta_", method = "Wald")
-logodds <- cbind(OR = fixef(l1_minority_sex_or), CI)
-ORwCI <- exp(logodds)
-print(ORwCI, digits = 3)
-
-# ...3.3) Trauma Stress --------------------------------------------
-
-# Trauma Stressors * gender
-l1_trauma_gender <- glmer(
-  # control for previous day's alcohol use
-  DD_alcohol_use ~ 1 + day + lag_DD_alcohol_use + 
-    # Add covariates
-    is_poc + above_25k + grand_age + 
-    # Add stressors
-    any_interpersonal_2week*Gender + 
-    # Random effects
-    (1|login_id),
-  family = "binomial",
-  data = full_data1,
-  nAGQ = 1, # Use Laplace approximation 
-  control = glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 2e5))
-)
-summary(l1_trauma_gender)
-
-# Gender is NOT significant
-CI <- confint(l1_trauma_gender, parm = "beta_", method = "Wald")
-logodds <- cbind(OR = fixef(l1_trauma_gender), CI)
-ORwCI <- exp(logodds)
-print(ORwCI, digits = 3)
-
-# Trauma Stressors * sexual orientation
-l1_trauma_sex_or <- glmer(
-  # control for previous day's alcohol use
-  DD_alcohol_use ~ 1 + day + lag_DD_alcohol_use + 
-    # Add covariates
-    is_poc + above_25k + grand_age + 
-    # Add stressors
-    any_interpersonal_2week*sex_orient + 
-    # Random effects
-    (1|login_id),
-  family = "binomial",
-  data = full_data1,
-  nAGQ = 1, # Use Laplace approximation 
-  control = glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 2e5))
-)
-summary(l1_trauma_sex_or)
-
-# Sexual orientation is NOT significant
-CI <- confint(l1_trauma_sex_or, parm = "beta_", method = "Wald")
-logodds <- cbind(OR = fixef(l1_trauma_sex_or), CI)
-ORwCI <- exp(logodds)
-print(ORwCI, digits = 3)
 
 # SENSITIVITY ANALYSIS ----------------------------------------------------
 
